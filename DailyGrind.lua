@@ -52,8 +52,9 @@ end
 local function getZoneName(zoneId)
 	local zoneName = "Unknown"
 	if zoneId then
-		zoneName = questieTrackerUtils:GetZoneNameByID(zoneId)
-		if not zoneName then
+		if zoneId > 0 then
+			zoneName = questieTrackerUtils:GetZoneNameByID(zoneId)
+		elseif zoneId < 0 then
 			zoneName = questieTrackerUtils:GetCategoryNameByID(zoneId)
 		end
 	end
@@ -69,19 +70,27 @@ function addon:BuildData()
 		local questInfo = questieDb.GetQuest(questId)
 		if questInfo then
 			zoneName = getZoneName(questInfo.zoneOrSort)
-			item = { text = questInfo.name, value = questId }
+			local fullName = questInfo.name .. " (" .. questId .. ")"
+			local doable, complete = questieDb.IsDoable(questId), questieDb.IsComplete(questId)
+			if complete then
+				item = { text = fullName, value = questId, disabled = true }
+			elseif doable then
+				item = { text = fullName, value = questId }
+			end
 		else
 			zoneName = "Unknown"
 			item = { text = "Unknown quest " .. questId, value = questId }
 		end
 		
-		local array = dataByZone[zoneName]
-		if array == nil then
-			array = {}
-			dataByZone[zoneName] = array
-			table.insert(zoneNameList, zoneName)
+		if item then
+			local array = dataByZone[zoneName]
+			if array == nil then
+				array = {}
+				dataByZone[zoneName] = array
+				table.insert(zoneNameList, zoneName)
+			end
+			table.insert(array, item)
 		end
-		table.insert(array, item)
 	end
 	
 	table.sort(zoneNameList)
@@ -91,7 +100,7 @@ function addon:BuildData()
 		local zoneQuests = dataByZone[zoneName]
 		table.sort(zoneQuests, function(a,b) return a.text < b.text end)
 		
-		local header = { text = zoneName, children = zoneQuests }
+		local header = { text = zoneName, value = zoneName, children = zoneQuests }
 		table.insert(resultData, header)
 	end
 	DAILY_GRIND_RESULT_DATA = resultData
