@@ -1,110 +1,88 @@
 
--- This file is only there in standalone Ace3 and provides handy dev tool stuff I guess
--- for now only /rl to reload your UI :)
--- note the complete overkill use of AceAddon and console, ain't it cool?
-
--- GLOBALS: next, loadstring, ReloadUI, geterrorhandler
--- GLOBALS: BINDING_HEADER_ACE3, BINDING_NAME_RELOADUI, Ace3, LibStub
-
--- BINDINGs labels
-BINDING_HEADER_ACE3 = "Ace3"
-BINDING_NAME_RELOADUI = "ReloadUI"
---
 
 local gui = LibStub("AceGUI-3.0")
 local reg = LibStub("AceConfigRegistry-3.0")
 local dialog = LibStub("AceConfigDialog-3.0")
 
-Ace3 = LibStub("AceAddon-3.0"):NewAddon("Ace3", "AceConsole-3.0")
-local Ace3 = Ace3
-
-local selectedgroup
-local frame
-local select
-local status = {}
-local configs = {}
-
-local function frameOnClose()
-	gui:Release(frame)
-	frame = nil
-end
-
-local function RefreshConfigs()
-	for name in reg:IterateOptionsTables() do
-		configs[name] = name
-	end
-end
-
-local function ConfigSelected(widget, event, value)
-	selectedgroup = value
-	dialog:Open(value, widget)
-end
+local addon = LibStub("AceAddon-3.0"):NewAddon("DailyGrind", "AceEvent-3.0", "AceConsole-3.0")
 
 local old_CloseSpecialWindows
 
--- GLOBALS: CloseSpecialWindows, next
-function Ace3:Open()
+function addon:OpenFrame()
 	if not old_CloseSpecialWindows then
 		old_CloseSpecialWindows = CloseSpecialWindows
 		CloseSpecialWindows = function()
 			local found = old_CloseSpecialWindows()
-			if frame then
-				frame:Hide()
+			if self.frame then
+				self.frame:Hide()
 				return true
 			end
 			return found
 		end
 	end
-	RefreshConfigs()
-	if next(configs) == nil then
-		self:Print("No Configs are Registered")
-		return
-	end
-
+	
+	local frame = self.frame
 	if not frame then
-		frame = gui:Create("Frame")
-		frame:ReleaseChildren()
-		frame:SetTitle("Ace3 Options")
-		frame:SetLayout("FILL")
-		frame:SetCallback("OnClose", frameOnClose)
-
-		select = gui:Create("DropdownGroup")
-		select:SetGroupList(configs)
-		select:SetCallback("OnGroupSelected", ConfigSelected)
-		frame:AddChild(select)
+		frame = self:CreateMainFrame()
 	end
-	if not selectedgroup then
-		selectedgroup = next(configs)
-	end
-	select:SetGroup(selectedgroup)
+	
 	frame:Show()
 end
 
-local function RefreshOnUpdate(this)
-	select:SetGroup(selectedgroup)
-	this:SetScript("OnUpdate", nil)
+function addon:CreateMainFrame()
+	local frame = gui:Create("Frame")
+	frame:ReleaseChildren()
+	frame:SetTitle("Daily Grind")
+	frame:SetLayout("Fill")
+	frame:SetCallback("OnClose", function()
+		gui:Release(frame)
+		self.frame = nil
+	end)
+	
+	local data = { 
+      { 
+        value = "A",
+        text = "Alpha",
+      },
+      {
+        value = "B",
+        text = "Bravo",
+        children = {
+          { 
+            value = "C", 
+            text = "Charlie",
+          },
+          {
+            value = "D",	
+            text = "Delta",
+            children = { 
+              { 
+                value = "E",
+                text = "Echo"
+              } 
+            }
+          }
+        }
+      },
+      { 
+        value = "F", 
+        text = "Foxtrot",
+        disabled = true,
+      }
+    }
+	
+	local tree = gui:Create("TreeGroup")
+	tree:SetTree(data)
+	frame:AddChild(tree)
 end
 
-function Ace3:ConfigTableChanged(event, appName)
-	if selectedgroup == appName and frame then
-		frame.frame:SetScript("OnUpdate", RefreshOnUpdate)
-	end
+function addon:UpdateActiveQuests()
+	-- todo
 end
 
-reg.RegisterCallback(Ace3, "ConfigTableChange", "ConfigTableChanged")
-
-function Ace3:PrintCmd(input)
-	input = input:trim():match("^(.-);*$")
-	local func, err = loadstring("LibStub(\"AceConsole-3.0\"):Print(" .. input .. ")")
-	if not func then
-		LibStub("AceConsole-3.0"):Print("Error: " .. err)
-	else
-		func()
-	end
-end
-
-function Ace3:OnInitialize()
-	self:RegisterChatCommand("ace3", function() self:Open() end)
-	self:RegisterChatCommand("rl", function() ReloadUI() end)
-	self:RegisterChatCommand("print", "PrintCmd")
+function addon:OnInitialize()
+	self:RegisterChatCommand("daily", "OpenFrame")
+	self:RegisterEvent("QUEST_ACCEPTED", "UpdateActiveQuests")
+	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
+	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
 end
