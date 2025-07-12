@@ -3,6 +3,7 @@
 ## Title: Daily Grind
 ## Notes: Daily quest tracker for MoP
 ## Author: Nerago
+## Dependencies: Questie
 ## Version: 0.1
 
 libs\LibStub\LibStub.lua
