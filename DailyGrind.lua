@@ -8,6 +8,7 @@ local addon = LibStub("AceAddon-3.0"):NewAddon("DailyGrind", "AceEvent-3.0", "Ac
 
 local questieDb = QuestieLoader:ImportModule("QuestieDB");
 local questieTrackerUtils = QuestieLoader:ImportModule("TrackerUtils");
+local questieDistanceUtils = QuestieLoader:ImportModule("DistanceUtils");
 
 local old_CloseSpecialWindows
 
@@ -52,17 +53,22 @@ function addon:CreateMainFrame()
 	frame:AddChild(tree)
 	
 	local content = gui:Create("SimpleGroup")
-	content:SetLayout("Flow")
+	content:SetLayout("List")
 	local label = gui:Create("Label")
 	content:AddChild(label)
 	local buttonGo = gui:Create("Button")
-	buttonGo:SetText("GO")
+	buttonGo:SetText("Map")
+	buttonGo:SetWidth(100)
+	buttonGo:SetCallback("OnClick", function(...) addon:buttonGoClick(...) end)
+	buttonGo:SetDisabled(true)
 	content:AddChild(buttonGo)
 	
 	tree:AddChild(content)
 	
 	self.label = label
 	self.buttonGo = buttonGo
+	
+	return frame
 end
 
 local function getZoneName(zoneId)
@@ -113,12 +119,12 @@ function addon:BuildData()
 				text = textUnavailable(text)
 				status = 3
 			end
-			item = { text = text, name = name, value = questId, status = status, info = questInfo }
+			item = { text = text, name = name, value = questId, status = status, quest = questInfo }
+			addon.questLookup[questId] = questInfo
 		else
 			zoneName = "Unknown"
 			item = { text = "Unknown quest " .. questId, name = "Unknown quest", value = questId, status = 3 }
 		end
-		addon.questLookup[questId] = item
 		
 		if item then
 			local array = dataByZone[zoneName]
@@ -160,12 +166,28 @@ end
 
 function addon:questSelected(questId)
 	local questInfo = addon.questLookup[questId]
-	self.currentQuest = questInfo
-	
-	local text = "Quest Id: "..questId
-	self.label:SetText(text)
-	
-	--self.buttonGo = buttonGo
+	if questInfo then
+	    local spawn, zoneId = questieDistanceUtils.GetNearestFinisherOrStarter(questInfo.Finisher)
+	    self.currentQuest = questInfo
+	    
+	    local text = "Quest Id: " .. questId .. "\n"
+	    text = text .. "Name: " .. questInfo.name .. "\n"
+	    if zoneId then
+	    	text = text .. "Zone: " .. getZoneName(zoneId) .. "\n"
+	    end
+	    
+	    self.label:SetText(text)
+		self.buttonGo:SetDisabled(zoneId == nil)
+	else
+		self.label:SetText("")
+		self.buttonGo:SetDisabled(true)
+	end
+end
+
+function addon:buttonGoClick()
+	if self.currentQuest then
+		questieTrackerUtils:ShowFinisherOnMap(self.currentQuest)
+	end
 end
 
 function addon:UpdateActiveQuests()
