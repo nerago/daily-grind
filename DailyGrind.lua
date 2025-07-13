@@ -48,7 +48,21 @@ function addon:CreateMainFrame()
 	local tree = gui:Create("TreeGroup")
 	tree:SetTree(data)
 	tree:SetTreeWidth(300, true)
+	tree:SetCallback("OnGroupSelected", function(...) addon:nodeSelected(...) end)
 	frame:AddChild(tree)
+	
+	local content = gui:Create("SimpleGroup")
+	content:SetLayout("Flow")
+	local label = gui:Create("Label")
+	content:AddChild(label)
+	local buttonGo = gui:Create("Button")
+	buttonGo:SetText("GO")
+	content:AddChild(buttonGo)
+	
+	tree:AddChild(content)
+	
+	self.label = label
+	self.buttonGo = buttonGo
 end
 
 local function getZoneName(zoneId)
@@ -76,8 +90,9 @@ local function textComplete(text)
 end
 
 function addon:BuildData()
-	local dataByZone = {};
-	local zoneNameList = {};
+	local dataByZone = {}
+	local zoneNameList = {}
+	addon.questLookup = {}
 	
 	for _, questId in ipairs(addon.quests) do
 		local zoneName, item
@@ -90,19 +105,20 @@ function addon:BuildData()
 			local doable, complete = questieDb.IsDoable(questId), C_QuestLog.IsQuestFlaggedCompleted(questId)
 			if complete then
 				text = textComplete(text)
-				status = 1
+				status = 2
 			elseif doable then
 				text = textAvailable(text)
-				status = 2
+				status = 1
 			else
 				text = textUnavailable(text)
 				status = 3
 			end
-			item = { text = text, name = name, value = questId, status = status }
+			item = { text = text, name = name, value = questId, status = status, info = questInfo }
 		else
 			zoneName = "Unknown"
 			item = { text = "Unknown quest " .. questId, name = "Unknown quest", value = questId, status = 3 }
 		end
+		addon.questLookup[questId] = item
 		
 		if item then
 			local array = dataByZone[zoneName]
@@ -129,8 +145,27 @@ function addon:BuildData()
 		local header = { text = zoneName, value = zoneName, children = zoneQuests }
 		table.insert(resultData, header)
 	end
-	DAILY_GRIND_RESULT_DATA = resultData
 	return resultData
+end
+
+function addon:nodeSelected(_, _, nodePath)
+	if nodePath then
+		local header, child = string.split("\001", nodePath)
+		if child then
+			local questId = tonumber(child)
+			addon:questSelected(questId)
+		end
+	end
+end
+
+function addon:questSelected(questId)
+	local questInfo = addon.questLookup[questId]
+	self.currentQuest = questInfo
+	
+	local text = "Quest Id: "..questId
+	self.label:SetText(text)
+	
+	--self.buttonGo = buttonGo
 end
 
 function addon:UpdateActiveQuests()
