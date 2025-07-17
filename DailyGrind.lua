@@ -1,8 +1,5 @@
-
-
 local gui = LibStub("AceGUI-3.0")
-local reg = LibStub("AceConfigRegistry-3.0")
-local dialog = LibStub("AceConfigDialog-3.0")
+local libDB = LibStub("AceDB-3.0")
 
 local addon = LibStub("AceAddon-3.0"):NewAddon("DailyGrind", "AceEvent-3.0", "AceConsole-3.0")
 
@@ -199,8 +196,11 @@ function addon:OnInitialize()
 	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
 	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
 	
-	local libDB, libIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
-	local dataObject = libDB:NewDataObject("DailyGrind", {
+	local defaults = { profile = { minimap = {} } }
+	self.db = libDB:New("DailyGrindDB", defaults, true)
+	
+	local libBroker, libIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
+	local dataObject = libBroker:NewDataObject("DailyGrind", {
 		type = "data source",
 		text = "Daily Grind",
 		icon = 409603,
@@ -212,7 +212,7 @@ function addon:OnInitialize()
 			tooltip:AddLine("Daily Grind")
 		end,
 	})
-	libIcon:Register("DailyGrind", dataObject, {})
+	libIcon:Register("DailyGrind", dataObject, self.db.profile.minimap)
 end
 
 

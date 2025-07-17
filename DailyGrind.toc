@@ -5,6 +5,7 @@
 ## Author: Nerago
 ## Dependencies: Questie
 ## Version: 0.1
+## SavedVariables: DailyGrindDB
 
 libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
