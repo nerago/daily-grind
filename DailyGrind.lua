@@ -10,21 +10,7 @@ local questieDb = QuestieLoader:ImportModule("QuestieDB");
 local questieTrackerUtils = QuestieLoader:ImportModule("TrackerUtils");
 local questieDistanceUtils = QuestieLoader:ImportModule("DistanceUtils");
 
-local old_CloseSpecialWindows
-
-function addon:OpenFrame()
-	if not old_CloseSpecialWindows then
-		old_CloseSpecialWindows = CloseSpecialWindows
-		CloseSpecialWindows = function()
-			local found = old_CloseSpecialWindows()
-			if addon.frame then
-				addon.frame:Hide()
-				return true
-			end
-			return found
-		end
-	end
-	
+function addon:OpenFrame()	
 	local frame = addon.frame
 	if not frame then
 		frame = self:CreateMainFrame()
@@ -32,6 +18,14 @@ function addon:OpenFrame()
 	end
 	
 	frame:Show()
+end
+
+function addon:ToggleFrame()
+	if addon.frame and addon.frame:IsVisible() then
+		addon.frame:Hide()
+	else
+		addon:OpenFrame()
+	end
 end
 
 function addon:CreateMainFrame()
@@ -67,6 +61,9 @@ function addon:CreateMainFrame()
 	
 	self.label = label
 	self.buttonGo = buttonGo
+	
+	DAILY_GRID_MAIN_FRAME = frame.frame
+	tinsert(UISpecialFrames, "DAILY_GRID_MAIN_FRAME")
 	
 	return frame
 end
@@ -106,7 +103,7 @@ function addon:BuildData()
 		if questInfo then
 			zoneName = getZoneName(questInfo.zoneOrSort)
 			local name = questInfo.name
-			local text = name .. " (" .. questId .. ")"
+			local text = name
 			local status = 0
 			local doable, complete = questieDb.IsDoable(questId), C_QuestLog.IsQuestFlaggedCompleted(questId)
 			if complete then
@@ -175,6 +172,8 @@ function addon:questSelected(questId)
 	    if zoneId then
 	    	text = text .. "Zone: " .. getZoneName(zoneId) .. "\n"
 	    end
+		
+		-- todo IsDoableVerbose
 	    
 	    self.label:SetText(text)
 		self.buttonGo:SetDisabled(zoneId == nil)
@@ -199,6 +198,21 @@ function addon:OnInitialize()
 	self:RegisterEvent("QUEST_ACCEPTED", "UpdateActiveQuests")
 	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
 	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
+	
+	local libDB, libIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
+	local dataObject = libDB:NewDataObject("DailyGrind", {
+		type = "data source",
+		text = "Daily Grind",
+		icon = 409603,
+		OnClick = function(self, btn)
+			addon:ToggleFrame()
+		end,
+		OnTooltipShow = function(tooltip)
+			if not tooltip or not tooltip.AddLine then return end
+			tooltip:AddLine("Daily Grind")
+		end,
+	})
+	libIcon:Register("DailyGrind", dataObject, {})
 end
 
 
@@ -226,6 +240,8 @@ end
 -- /dump QuestieLoader:ImportModule("QuestieDB")
 -- /dump QuestieLoader:ImportModule("QuestieDB").GetQuest(29211)
 -- /dump QuestieLoader:ImportModule("QuestieDB").GetQuest(29211).zoneOrSort
+
+-- /dump QuestieLoader:ImportModule("QuestieDB").IsDoable(31852)
 
 --    local sortedQuestIds, questDetails = TrackerUtils:GetSortedQuestIds()
 --            local zoneName = questDetails[questId].zoneName
