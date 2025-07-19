@@ -94,9 +94,18 @@ function addon:questCategory(questInfo)
 			return category
 		end
 	end
-	
-	print(id, questInfo.zoneOrSort)
 	return getZoneName(questInfo.zoneOrSort)
+end
+
+function addon:headerFor(zoneName, zoneQuests)
+	local counts = { 0, 0, 0 }
+	for _, quest in ipairs(zoneQuests) do
+		counts[quest.status] = counts[quest.status] + 1
+	end
+
+	local text = zoneName .. " "
+	text = text .. counts[2] .. "/" .. (counts[1] + counts[2])
+	return text
 end
 
 function addon:BuildData()
@@ -154,7 +163,9 @@ function addon:BuildData()
 			else return a.text < b.text end
 		end)
 		
-		local header = { text = zoneName, value = zoneName, children = zoneQuests }
+		local headerText = self:headerFor(zoneName, zoneQuests);
+		
+		local header = { text = headerText, value = zoneName, children = zoneQuests }
 		table.insert(resultData, header)
 	end
 	return resultData
