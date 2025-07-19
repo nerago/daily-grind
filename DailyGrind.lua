@@ -66,15 +66,13 @@ function addon:CreateMainFrame()
 end
 
 local function getZoneName(zoneId)
-	local zoneName = "Unknown"
 	if zoneId then
 		if zoneId > 0 then
-			zoneName = questieTrackerUtils:GetZoneNameByID(zoneId)
+			return questieTrackerUtils:GetZoneNameByID(zoneId)
 		elseif zoneId < 0 then
-			zoneName = questieTrackerUtils:GetCategoryNameByID(zoneId)
+			return questieTrackerUtils:GetCategoryNameByID(zoneId)
 		end
 	end
-	return zoneName
 end
 
 local function textUnavailable(text)
@@ -89,6 +87,18 @@ local function textComplete(text)
 	return "|cff20E020"..text..FONT_COLOR_CODE_CLOSE
 end
 
+function addon:questCategory(questInfo)
+	local id = questInfo.Id
+	for category, content in pairs(addon.questTable) do
+		if table.contains(content, id) then
+			return category
+		end
+	end
+	
+	print(id, questInfo.zoneOrSort)
+	return getZoneName(questInfo.zoneOrSort)
+end
+
 function addon:BuildData()
 	local dataByZone = {}
 	local zoneNameList = {}
@@ -98,7 +108,7 @@ function addon:BuildData()
 		local zoneName, item
 		local questInfo = questieDb.GetQuest(questId)
 		if questInfo then
-			zoneName = getZoneName(questInfo.zoneOrSort)
+			zoneName = self:questCategory(questInfo)
 			local name = questInfo.name
 			local text = name
 			local status = 0
@@ -116,9 +126,10 @@ function addon:BuildData()
 			item = { text = text, name = name, value = questId, status = status, quest = questInfo }
 			addon.questLookup[questId] = questInfo
 		else
-			zoneName = "Unknown"
 			item = { text = "Unknown quest " .. questId, name = "Unknown quest", value = questId, status = 3 }
 		end
+		
+		if not zoneName then zoneName = "Unknown" end
 		
 		if item then
 			local array = dataByZone[zoneName]
@@ -136,6 +147,7 @@ function addon:BuildData()
 	local resultData = {}
 	for _, zoneName in ipairs(zoneNameList) do
 		local zoneQuests = dataByZone[zoneName]
+		-- TODO name sort broken?
 		table.sort(zoneQuests, function(a,b) 
 			if a.status < b.status then return true
 			elseif a.status >= b.status then return false
