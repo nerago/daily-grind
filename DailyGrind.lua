@@ -65,7 +65,7 @@ function addon:CreateMainFrame()
 	return frame
 end
 
-local function getZoneName(zoneId)
+function addon:getZoneName(zoneId)
 	if zoneId then
 		if zoneId > 0 then
 			return questieTrackerUtils:GetZoneNameByID(zoneId)
@@ -94,7 +94,17 @@ function addon:questCategory(questInfo)
 			return category
 		end
 	end
-	return getZoneName(questInfo.zoneOrSort)
+	return self:getZoneName(questInfo.zoneOrSort)
+end
+
+function addon:sortQuests(quests)
+	table.sort(quests, function(a,b) 
+		if a.status ~= b.status then 
+			return a.status < b.status
+		else 
+			return a.name < b.name 
+		end
+	end)
 end
 
 function addon:headerFor(zoneName, zoneQuests)
@@ -156,12 +166,7 @@ function addon:BuildData()
 	local resultData = {}
 	for _, zoneName in ipairs(zoneNameList) do
 		local zoneQuests = dataByZone[zoneName]
-		-- TODO name sort broken?
-		table.sort(zoneQuests, function(a,b) 
-			if a.status < b.status then return true
-			elseif a.status >= b.status then return false
-			else return a.text < b.text end
-		end)
+		self:sortQuests(zoneQuests)
 		
 		local headerText = self:headerFor(zoneName, zoneQuests);
 		
@@ -190,7 +195,7 @@ function addon:questSelected(questId)
 	    local text = "Quest Id: " .. questId .. "\n"
 	    text = text .. "Name: " .. questInfo.name .. "\n"
 	    if zoneId then
-	    	text = text .. "Zone: " .. getZoneName(zoneId) .. "\n"
+	    	text = text .. "Zone: " .. self:getZoneName(zoneId) .. "\n"
 	    end
 		
 		-- todo IsDoableVerbose
