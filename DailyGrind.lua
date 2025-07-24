@@ -30,7 +30,11 @@ function addon:createMainFrame()
 	frame:ReleaseChildren()
 	frame:SetTitle("Daily Grind")
 	frame:SetLayout("Fill")
+	frame:SetWidth(self.db.profile.frameWidth)
+	frame:SetHeight(self.db.profile.frameHeight)
 	frame:SetCallback("OnClose", function()
+		self.db.profile.frameWidth = frame.frame:GetWidth()
+		self.db.profile.frameHeight = frame.frame:GetHeight()
 		gui:Release(frame)
 		self.frame = nil
 	end)
@@ -123,12 +127,26 @@ function addon:headerFor(zoneName, zoneQuests)
 	return text
 end
 
+function addon:buildQuestList()
+	local list = {}
+	for _, questId in ipairs(addon.quests) do
+		list[questId] = 1
+	end
+	for _, subList in pairs(self.db.profile.questTable) do
+		for _, questId in ipairs(subList) do
+			list[questId] = 1
+		end
+	end
+	return list
+end
+
 function addon:buildData()
 	local dataByZone = {}
 	local zoneNameList = {}
 	addon.questLookup = {}
 	
-	for _, questId in ipairs(addon.quests) do
+	local questList = self:buildQuestList()
+	for questId, _ in pairs(questList) do
 		local zoneName, item
 		local questInfo = questieDb.GetQuest(questId)
 		if questInfo then
@@ -234,7 +252,12 @@ function addon:OnInitialize()
 	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
 	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
 	
-	local defaults = { profile = { minimap = {}, questTable = {} } }
+	local defaults = { profile = { 
+		minimap = {}, 
+		questTable = {},
+		frameWidth = 700,
+		frameHeight = 700
+	} }
 	self.db = libDB:New("DailyGrindDB", defaults, true)
 	
 	local libBroker, libIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
