@@ -7,25 +7,25 @@ local questieDb = QuestieLoader:ImportModule("QuestieDB");
 local questieTrackerUtils = QuestieLoader:ImportModule("TrackerUtils");
 local questieDistanceUtils = QuestieLoader:ImportModule("DistanceUtils");
 
-function addon:OpenFrame()	
+function addon:openFrame()	
 	local frame = addon.frame
 	if not frame then
-		frame = self:CreateMainFrame()
+		frame = self:createMainFrame()
 		addon.frame = frame
 	end
 	
 	frame:Show()
 end
 
-function addon:ToggleFrame()
+function addon:toggleFrame()
 	if addon.frame and addon.frame:IsVisible() then
 		addon.frame:Hide()
 	else
-		addon:OpenFrame()
+		addon:openFrame()
 	end
 end
 
-function addon:CreateMainFrame()
+function addon:createMainFrame()
 	local frame = gui:Create("Frame")
 	frame:ReleaseChildren()
 	frame:SetTitle("Daily Grind")
@@ -35,7 +35,7 @@ function addon:CreateMainFrame()
 		self.frame = nil
 	end)
 	
-	local data = self:BuildData();
+	local data = self:buildData();
 	
 	local tree = gui:Create("TreeGroup")
 	tree:SetTree(data)
@@ -89,6 +89,11 @@ end
 
 function addon:questCategory(questInfo)
 	local id = questInfo.Id
+	for category, content in pairs(self.db.profile.questTable) do
+		if table.contains(content, id) then
+			return category
+		end
+	end
 	for category, content in pairs(addon.questTable) do
 		if table.contains(content, id) then
 			return category
@@ -118,7 +123,7 @@ function addon:headerFor(zoneName, zoneQuests)
 	return text
 end
 
-function addon:BuildData()
+function addon:buildData()
 	local dataByZone = {}
 	local zoneNameList = {}
 	addon.questLookup = {}
@@ -218,13 +223,18 @@ function addon:UpdateActiveQuests()
 	-- todo
 end
 
+function addon:acceptQuest(eventName, questLogIndex, questId)
+	local acceptedQueue = self.acceptedQueue
+	table.insert(acceptedQueue, questId) -- todo limits
+end
+
 function addon:OnInitialize()
-	self:RegisterChatCommand("daily", "OpenFrame")
-	self:RegisterEvent("QUEST_ACCEPTED", "UpdateActiveQuests")
+	self:RegisterChatCommand("daily", "slashCommand")
+	self:RegisterEvent("QUEST_ACCEPTED", "acceptQuest")
 	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
 	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
 	
-	local defaults = { profile = { minimap = {} } }
+	local defaults = { profile = { minimap = {}, questTable = {} } }
 	self.db = libDB:New("DailyGrindDB", defaults, true)
 	
 	local libBroker, libIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
@@ -233,7 +243,7 @@ function addon:OnInitialize()
 		text = "Daily Grind",
 		icon = 409603,
 		OnClick = function(self, btn)
-			addon:ToggleFrame()
+			addon:toggleFrame()
 		end,
 		OnTooltipShow = function(tooltip)
 			if not tooltip or not tooltip.AddLine then return end
@@ -241,6 +251,47 @@ function addon:OnInitialize()
 		end,
 	})
 	libIcon:Register("DailyGrind", dataObject, self.db.profile.minimap)
+	
+	self.acceptedQueue = {}
+end
+
+function addon:slashCommand(text)
+	if text == nil or text == "" then
+		self:openFrame()
+	elseif string.startswith(text, "set") then
+		local count, label = string.match(text, "set (%d+) (%a+)")
+		if count and label then
+			self:setQuests(count, label)
+		else
+			print("syntax /daily set # word")
+		end
+	end
+end
+
+function addon:setQuests(count, label)
+	local questTable = self.db.profile.questTable
+	local acceptedQueue = self.acceptedQueue
+	
+	local list = questTable[label]
+	if not list then
+		list = {}
+		questTable[label] = list
+	end
+	
+	local minIndex = #acceptedQueue - count + 1
+	if minIndex >= 1 then
+		for i = #acceptedQueue - count + 1, #acceptedQueue do
+			local questId = acceptedQueue[i]
+			if table.contains(list, questId) then
+				print("quest " .. questId .. " already set to " .. label)
+			else
+				table.insert(list, questId)
+				print("adding quest " .. questId .. " as " .. label)
+			end
+		end
+	else
+		print("not enough quests")
+	end
 end
 
 
@@ -277,5 +328,7 @@ end
 
 --  /dump QuestieLoader:ImportModule("TrackerUtils").GetZoneNameByID(-379)
 -- /dump QuestieLoader:ImportModule("TrackerUtils"):GetCategoryNameByID(-379)
+
+-- /dump LibStub("AceAddon-3.0"):GetAddon("DailyGrind").db.profile.questTable
 
 
