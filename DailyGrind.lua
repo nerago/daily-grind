@@ -63,8 +63,8 @@ function addon:createMainFrame()
 	self.label = label
 	self.buttonGo = buttonGo
 	
-	DAILY_GRID_MAIN_FRAME = frame.frame
-	tinsert(UISpecialFrames, "DAILY_GRID_MAIN_FRAME")
+	DAILY_GRIND_MAIN_FRAME = frame.frame
+	tinsert(UISpecialFrames, "DAILY_GRIND_MAIN_FRAME")
 	
 	return frame
 end
@@ -104,6 +104,15 @@ function addon:questCategory(questInfo)
 		end
 	end
 	return self:getZoneName(questInfo.zoneOrSort)
+end
+
+function addon:isKnownCategory(id)
+	for category, content in pairs(self.db.profile.questTable) do
+		if table.contains(content, id) then
+			return true
+		end
+	end
+	return false
 end
 
 function addon:sortQuests(quests)
@@ -237,20 +246,23 @@ function addon:buttonGoClick()
 	end
 end
 
-function addon:UpdateActiveQuests()
+function addon:updateActiveQuests()
 	-- todo
 end
 
 function addon:acceptQuest(eventName, questLogIndex, questId)
 	local acceptedQueue = self.acceptedQueue
 	table.insert(acceptedQueue, questId) -- todo limits
+	if not self:isKnownCategory(questId) then
+		print("DailyGrind: " .. questId .. " not in a category")
+	end
 end
 
 function addon:OnInitialize()
 	self:RegisterChatCommand("daily", "slashCommand")
 	self:RegisterEvent("QUEST_ACCEPTED", "acceptQuest")
-	self:RegisterEvent("QUEST_REMOVED", "UpdateActiveQuests")
-	self:RegisterEvent("QUEST_TURNED_IN", "UpdateActiveQuests")
+	self:RegisterEvent("QUEST_REMOVED", "updateActiveQuests")
+	self:RegisterEvent("QUEST_TURNED_IN", "updateActiveQuests")
 	
 	local defaults = { profile = { 
 		minimap = {}, 
@@ -305,11 +317,16 @@ function addon:setQuests(count, label)
 	if minIndex >= 1 then
 		for i = #acceptedQueue - count + 1, #acceptedQueue do
 			local questId = acceptedQueue[i]
+			local questInfo = questieDb.GetQuest(questId)
+			local name = "Unknown"
+			if questInfo then
+				name = questInfo.name
+			end
 			if table.contains(list, questId) then
-				print("quest " .. questId .. " already set to " .. label)
+				print("quest " .. questId .. " (" .. name .. ") already set to " .. label)
 			else
 				table.insert(list, questId)
-				print("adding quest " .. questId .. " as " .. label)
+				print("adding quest " .. questId .. " (" .. name .. ") as " .. label)
 			end
 		end
 	else
