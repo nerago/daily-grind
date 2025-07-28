@@ -2,6 +2,7 @@ local gui = LibStub("AceGUI-3.0")
 local libDB = LibStub("AceDB-3.0")
 
 local addon = LibStub("AceAddon-3.0"):NewAddon("DailyGrind", "AceEvent-3.0", "AceConsole-3.0")
+DAILY_GRIND = addon
 
 local questieDb = QuestieLoader:ImportModule("QuestieDB");
 local questieTrackerUtils = QuestieLoader:ImportModule("TrackerUtils");
@@ -61,8 +62,7 @@ function addon:addTab()
 	
 	self:updateGroupList()
 	
-	--local acceptedQueue = self.acceptedQueue
-	local acceptedQueue = {31953, 32869}
+	local acceptedQueue = self.acceptedQueue
 	local minIndex = math.max(#acceptedQueue - 20, 1)
 	local maxIndex = #acceptedQueue
 	if maxIndex > 0 then
@@ -77,9 +77,10 @@ function addon:addTab()
 				group:AddChild(label)
 				
 				local drop = gui:Create("Dropdown")
-				drop:SetList(self.groupList) -- todo
+				drop:SetList(self.groupList, self.groupListOrder)
 				drop:SetValue(category)
 				drop:SetLabel("Category")
+				drop:SetCallback("OnValueChanged", function (_, _, key) addon:onChooseQuestCategory(questId, key) end)
 				group:AddChild(drop)
 			else
 				local label = gui:Create("Label")
@@ -114,6 +115,9 @@ function addon:createMainFrame()
 		self.db.profile.frameHeight = frame.frame:GetHeight()
 		gui:Release(frame)
 		self.frame = nil
+		self.tree = nil
+		self.label = nil
+		self.buttonGo = nil
 	end)
 	
 	local tabs = gui:Create("TabGroup")
@@ -280,6 +284,13 @@ function addon:buildData()
 	return resultData
 end
 
+function addon:refreshData()
+	self:updateGroupList()
+	if self.tree then
+		self.tree:SetTree(self:buildData())
+	end
+end
+
 function addon:nodeSelected(_, _, nodePath)
 	if nodePath then
 		local header, child = string.split("\001", nodePath)
@@ -319,7 +330,7 @@ function addon:buttonGoClick()
 end
 
 function addon:updateActiveQuests()
-	-- todo
+	self:refreshData()
 end
 
 function addon:acceptQuest(eventName, questLogIndex, questId)
@@ -377,6 +388,7 @@ function addon:slashCommand(text)
 	end
 end
 
+-- obsolete soon
 function addon:setQuests(count, label)
 	local questTable = self.db.profile.questTable
 	local acceptedQueue = self.acceptedQueue
@@ -399,7 +411,7 @@ function addon:setQuests(count, label)
 			if table.contains(list, questId) then
 				print("quest " .. questId .. " (" .. name .. ") already set to " .. label)
 			else
-				table.insert(list, questId)
+				self:setQuestCategory(questId, label)
 				print("adding quest " .. questId .. " (" .. name .. ") as " .. label)
 			end
 		end
@@ -409,50 +421,64 @@ function addon:setQuests(count, label)
 end
 
 function addon:updateGroupList()
-	local groupList = {}
+	local groupList, order = {}, {}
 	for category, _ in pairs(self.db.profile.questTable) do
 		groupList[category] = category
 	end
 	for category, _ in pairs(addon.questTable) do
 		groupList[category] = category
 	end
+	
+	for category, _ in pairs(groupList) do
+		table.insert(order, category)
+	end
+	table.sort(order)
+	
+	groupList["Add New..."] = "Add New..."
+	table.insert(order, "Add New...")
+	
 	self.groupList = groupList
+	self.groupListOrder = order
 end
 
+function addon:onChooseQuestCategory(questId, key)
+	if key == "Add New..." then
+		StaticPopupDialogs["DAILY_GRIND_ADD"] = {
+			text = "Add new category name",
+			button1 = "Accept",
+			button2 = "Cancel",
+			OnAccept = function(dialog)
+				local text = dialog.editBox:GetText()
+				if text and text ~= "" then
+					local questTable = self.db.profile.questTable
+					questTable[text] = {}
+					self:updateGroupList()
+				end
+			end,
+			timeout = 0,
+			hideOnEscape = true,
+			whileDead = true,
+			hasEditBox = true
+		}
+		StaticPopup_Show("DAILY_GRIND_ADD")
+	else
+		self:setQuestCategory(questId, key)
+	end
+end
 
-
-
---
--- IsQuestCompletable
--- QuestIsDaily QuestIsWeekly
--- C_QuestLog.GetAllCompletedQuestIDs
--- C_QuestLog.GetMaxNumQuests
--- C_QuestLog.GetMaxNumQuestsCanAccept
--- C_QuestLog.GetQuestIDForLogIndex
--- C_QuestLog.GetHeaderIndexForQuest
--- C_QuestLog.GetInfo (details but active only)
--- numShownEntries, numQuests = C_QuestLog.GetNumQuestLogEntries()
---
--- /run for a,b in pairs(LibStub("AceAddon-3.0"):GetAddon("DailyGrind").quests) do print(b,C_QuestLog.IsQuestFlaggedCompleted(b)) end
--- /run for a,b in pairs(LibStub("AceAddon-3.0"):GetAddon("DailyGrind").quests) do if C_QuestLog.IsQuestFlaggedCompleted(b) then print(b) end end
---
--- C_QuestLog.GetQuestInfo(29211) (title)
--- C_QuestLog.IsQuestFlaggedCompleted(29211)
--- C_QuestLog.GetDistanceSqToQuest
--- 
--- /dump QuestieLoader:ImportModule("QuestieDB")
--- /dump QuestieLoader:ImportModule("QuestieDB").GetQuest(29211)
--- /dump QuestieLoader:ImportModule("QuestieDB").GetQuest(29211).zoneOrSort
-
--- /dump QuestieLoader:ImportModule("QuestieDB").IsDoable(31852)
-
---    local sortedQuestIds, questDetails = TrackerUtils:GetSortedQuestIds()
---            local zoneName = questDetails[questId].zoneName
---			TrackerUtils:GetZoneNameByID
-
---  /dump QuestieLoader:ImportModule("TrackerUtils").GetZoneNameByID(-379)
--- /dump QuestieLoader:ImportModule("TrackerUtils"):GetCategoryNameByID(-379)
-
--- /dump LibStub("AceAddon-3.0"):GetAddon("DailyGrind").db.profile.questTable
-
-
+function addon:setQuestCategory(questId, target)
+	local questTable = self.db.profile.questTable
+	local added = false
+	for category, list in pairs(questTable) do
+		if category == target and not table.contains(list, questId) then
+			table.insert(list, questId)
+			added = true
+		elseif category ~= target and table.contains(list, questId) then
+			table.remove(list, questId)
+		end
+	end
+	
+	if not added and not questTable[target] then
+		questTable[target] = {questId}
+	end
+end
