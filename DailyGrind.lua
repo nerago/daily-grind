@@ -29,7 +29,7 @@ function addon:treeTab()
 	local data = self:buildData();
 	
 	local tree = gui:Create("TreeGroup")
-	--tree:SetStatusTable(self.treeStatus)
+	tree:SetStatusTable(self.treeStatus)
 	tree:SetTree(data)
 	tree:SetTreeWidth(300, true)
 	tree:SetLayout("Fill")
@@ -56,6 +56,47 @@ function addon:treeTab()
 end
 
 function addon:addTab()
+	local group = gui:Create("SimpleGroup")
+	group:SetLayout("List")
+	
+	self:updateGroupList()
+	
+	--local acceptedQueue = self.acceptedQueue
+	local acceptedQueue = {31953, 32869}
+	local minIndex = math.max(#acceptedQueue - 20, 1)
+	local maxIndex = #acceptedQueue
+	if maxIndex > 0 then
+		for i = minIndex, maxIndex do
+			local questId = acceptedQueue[i]
+			local questInfo = questieDb.GetQuest(questId)
+			if questInfo then
+				local category = self:questCategory(questInfo)
+				
+				local label = gui:Create("Label")
+				label:SetText(questInfo.name)
+				group:AddChild(label)
+				
+				local drop = gui:Create("Dropdown")
+				drop:SetList(self.groupList) -- todo
+				drop:SetValue(category)
+				drop:SetLabel("Category")
+				group:AddChild(drop)
+			else
+				local label = gui:Create("Label")
+				label:SetText("Unknown quest " .. questId)
+				group:AddChild(label)
+			end
+			
+			local spacer = gui:Create("Label")
+			spacer:SetText(" ")
+			group:AddChild(spacer)
+		end
+	end
+	
+	return group
+end
+
+function addon:filterTab()
 	local label = gui:Create("Label")
 	label:SetText("TODO")
 	return label
@@ -81,13 +122,17 @@ function addon:createMainFrame()
 		container:ReleaseChildren()
 		if tabName == "tree" then
 			container:AddChild(self:treeTab())
-		else
+		elseif tabName == "add" then
 			container:AddChild(self:addTab())
+		else
+			container:AddChild(self:filterTab())
 		end
 	end)
 	frame:AddChild(tabs)
 	
-	tabs:SetTabs({{value = "tree", text = "Progress"}, {value = "add", text = "Add Recent Quests"}})
+	tabs:SetTabs({{value = "tree", text = "Progress"}, 
+	              {value = "add", text = "Add Recent Quests"}, 
+				  {value = "filter", text = "Filter"}})
 	tabs:SelectTab("tree")
 	
 	DAILY_GRIND_MAIN_FRAME = frame.frame
@@ -316,6 +361,7 @@ function addon:OnInitialize()
 	
 	self.acceptedQueue = {}
 	self.treeStatus = {}
+	self.groupList = {}
 end
 
 function addon:slashCommand(text)
@@ -362,6 +408,16 @@ function addon:setQuests(count, label)
 	end
 end
 
+function addon:updateGroupList()
+	local groupList = {}
+	for category, _ in pairs(self.db.profile.questTable) do
+		groupList[category] = category
+	end
+	for category, _ in pairs(addon.questTable) do
+		groupList[category] = category
+	end
+	self.groupList = groupList
+end
 
 
 
