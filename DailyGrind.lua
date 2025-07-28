@@ -25,6 +25,42 @@ function addon:toggleFrame()
 	end
 end
 
+function addon:treeTab()
+	local data = self:buildData();
+	
+	local tree = gui:Create("TreeGroup")
+	--tree:SetStatusTable(self.treeStatus)
+	tree:SetTree(data)
+	tree:SetTreeWidth(300, true)
+	tree:SetLayout("Fill")
+	tree:SetCallback("OnGroupSelected", function(...) addon:nodeSelected(...) end)
+	
+	local label = gui:Create("Label")
+	local buttonGo = gui:Create("Button")
+	buttonGo:SetText("Map")
+	buttonGo:SetWidth(100)
+	buttonGo:SetCallback("OnClick", function(...) addon:buttonGoClick(...) end)
+	buttonGo:SetDisabled(true)
+	
+	local questInfo = gui:Create("SimpleGroup")
+	questInfo:SetLayout("List")
+	questInfo:AddChild(label)
+	questInfo:AddChild(buttonGo)
+	tree:AddChild(questInfo)
+	
+	self.tree = tree
+	self.label = label
+	self.buttonGo = buttonGo
+	
+	return tree
+end
+
+function addon:addTab()
+	local label = gui:Create("Label")
+	label:SetText("TODO")
+	return label
+end
+
 function addon:createMainFrame()
 	local frame = gui:Create("Frame")
 	frame:ReleaseChildren()
@@ -39,29 +75,20 @@ function addon:createMainFrame()
 		self.frame = nil
 	end)
 	
-	local data = self:buildData();
+	local tabs = gui:Create("TabGroup")
+	tabs:SetLayout("Fill")
+	tabs:SetCallback("OnGroupSelected", function (container, _, tabName) 
+		container:ReleaseChildren()
+		if tabName == "tree" then
+			container:AddChild(self:treeTab())
+		else
+			container:AddChild(self:addTab())
+		end
+	end)
+	frame:AddChild(tabs)
 	
-	local tree = gui:Create("TreeGroup")
-	tree:SetTree(data)
-	tree:SetTreeWidth(300, true)
-	tree:SetCallback("OnGroupSelected", function(...) addon:nodeSelected(...) end)
-	frame:AddChild(tree)
-	
-	local content = gui:Create("SimpleGroup")
-	content:SetLayout("List")
-	local label = gui:Create("Label")
-	content:AddChild(label)
-	local buttonGo = gui:Create("Button")
-	buttonGo:SetText("Map")
-	buttonGo:SetWidth(100)
-	buttonGo:SetCallback("OnClick", function(...) addon:buttonGoClick(...) end)
-	buttonGo:SetDisabled(true)
-	content:AddChild(buttonGo)
-	
-	tree:AddChild(content)
-	
-	self.label = label
-	self.buttonGo = buttonGo
+	tabs:SetTabs({{value = "tree", text = "Progress"}, {value = "add", text = "Add Recent Quests"}})
+	tabs:SelectTab("tree")
 	
 	DAILY_GRIND_MAIN_FRAME = frame.frame
 	tinsert(UISpecialFrames, "DAILY_GRIND_MAIN_FRAME")
@@ -288,6 +315,7 @@ function addon:OnInitialize()
 	libIcon:Register("DailyGrind", dataObject, self.db.profile.minimap)
 	
 	self.acceptedQueue = {}
+	self.treeStatus = {}
 end
 
 function addon:slashCommand(text)
