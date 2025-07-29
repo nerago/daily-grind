@@ -208,6 +208,11 @@ function addon:isKnownCategory(id)
 			return true
 		end
 	end
+	for category, content in pairs(addon.questTable) do
+		if table.contains(content, id) then
+			return true
+		end
+	end
 	return false
 end
 
@@ -236,6 +241,11 @@ function addon:buildQuestList()
 	local list = {}
 	for _, questId in ipairs(addon.quests) do
 		list[questId] = 1
+	end
+	for _, subList in pairs(addon.questTable) do
+		for _, questId in ipairs(subList) do
+			list[questId] = 1
+		end
 	end
 	for _, subList in pairs(self.db.profile.questTable) do
 		for _, questId in ipairs(subList) do
@@ -520,5 +530,18 @@ function addon:setQuestCategory(questId, target)
 	
 	if not added and not questTable[target] then
 		questTable[target] = {questId}
+	end
+end
+
+function addon:validateTables()
+	local seen = {}
+	for category, content in pairs(addon.questTable) do
+		for _, id in ipairs(content) do
+			if seen[id] then
+				print("duplicated "..id)
+			else
+				seen[id] = true
+			end
+		end
 	end
 end
