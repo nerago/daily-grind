@@ -516,6 +516,19 @@ function addon:onChooseQuestCategory(questId, key)
 	end
 end
 
+local function arrayRemoveElement(array, element)
+	local targetIndex = -1
+	for i, item in ipairs(array) do
+		if item == element then
+			targetIndex = i
+			break
+		end
+	end
+	if targetIndex > 1 then
+		table.remove(array, targetIndex)
+	end
+end
+
 function addon:setQuestCategory(questId, target)
 	local questTable = self.db.profile.questTable
 	local added = false
@@ -524,7 +537,7 @@ function addon:setQuestCategory(questId, target)
 			table.insert(list, questId)
 			added = true
 		elseif category ~= target and table.contains(list, questId) then
-			table.remove(list, questId) -- TODO doesn't work like this
+			arrayRemoveElement(list, questId)
 		end
 	end
 	
