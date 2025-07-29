@@ -25,3 +25,13 @@ addon.questTable = {
 	["Battle Pets - Darkmoon"] = { 32175 },
 	["Darkmoon"] = { 29436, 29438, 29434, 29463, 29455 }
 }
+
+addon.categoryFilters = {
+	["Cataclysm"] = {"Firelands Invasion", "Tol Barad", "Tol Barad Peninsula"},
+	["MOP - Phase 1"] = {"Cloud Serpent", "Halfhill Farm", "Shado-Pan", "Golden Lotus", "Klaxxi", 
+	                     "August Celestials - Wastes", "August Celestials - Jade", "August Celestials - Peak", "August Celestials - Steppes"},
+	["MOP - Later"] = {},
+	["Battle Pets - MOP"] = {"Battle Pets - Pandaria"},
+	["Battle Pets - Other"] = {"Battle Pets - Kalimdor", "Battle Pets - Eastern Kingdoms", "Battle Pets - Outland", "Battle Pets - Northrend", "Battle Pets - Cataclysm"},
+	["Darkmoon"] = {"Darkmoon", "Battle Pets - Darkmoon"}
+}

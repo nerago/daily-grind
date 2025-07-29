@@ -59,6 +59,8 @@ end
 function addon:addTab()
 	local group = gui:Create("SimpleGroup")
 	group:SetLayout("List")
+	group:SetCallback("OnRelease", function() group.frame:SetClipsChildren(false) end)
+	group.frame:SetClipsChildren(true)
 	
 	self:updateGroupList()
 	
@@ -66,7 +68,7 @@ function addon:addTab()
 	local minIndex = math.max(#acceptedQueue - 20, 1)
 	local maxIndex = #acceptedQueue
 	if maxIndex > 0 then
-		for i = minIndex, maxIndex do
+		for i = maxIndex, minIndex, -1 do
 			local questId = acceptedQueue[i]
 			local questInfo = questieDb.GetQuest(questId)
 			if questInfo then
@@ -98,9 +100,27 @@ function addon:addTab()
 end
 
 function addon:filterTab()
-	local label = gui:Create("Label")
-	label:SetText("TODO")
-	return label
+	local group = gui:Create("SimpleGroup")
+	group:SetLayout("List")
+	
+	local filterNames = {}
+	for key, _ in pairs(addon.categoryFilters) do
+		table.insert(filterNames, key)
+	end
+	table.sort(filterNames)
+	
+	local filterState = self.db.profile.filter
+	for _, key in ipairs(filterNames) do
+		local check = gui:Create("CheckBox")
+		check:SetValue(filterState[key])
+		check:SetLabel(key)
+		check:SetCallback("OnValueChanged", function(_, _, value)
+			filterState[key] = value
+		end)
+		group:AddChild(check)
+	end
+	
+	return group
 end
 
 function addon:createMainFrame()
@@ -270,16 +290,35 @@ function addon:buildData()
 	end
 	
 	table.sort(zoneNameList)
+
+	local filterState = self.db.profile.filter
+	local permittedZones = {}
+	for filter, zonesIncluded in pairs(self.categoryFilters) do
+		if filterState[filter] == nil then
+			filterState[filter] = true -- set default to true if missing
+		end
+		if filterState[filter] == true then
+			for _, zone in ipairs(zonesIncluded) do
+				permittedZones[zone] = true
+			end
+		else
+			for _, zone in ipairs(zonesIncluded) do
+				permittedZones[zone] = false
+			end
+		end
+	end
 	
 	local resultData = {}
 	for _, zoneName in ipairs(zoneNameList) do
-		local zoneQuests = dataByZone[zoneName]
-		self:sortQuests(zoneQuests)
-		
-		local headerText = self:headerFor(zoneName, zoneQuests);
-		
-		local header = { text = headerText, value = zoneName, children = zoneQuests }
-		table.insert(resultData, header)
+		if permittedZones[zoneName] ~= false then
+			local zoneQuests = dataByZone[zoneName]
+			self:sortQuests(zoneQuests)
+			
+			local headerText = self:headerFor(zoneName, zoneQuests);
+			
+			local header = { text = headerText, value = zoneName, children = zoneQuests }
+			table.insert(resultData, header)
+		end
 	end
 	return resultData
 end
@@ -350,6 +389,7 @@ function addon:OnInitialize()
 	local defaults = { profile = { 
 		minimap = {}, 
 		questTable = {},
+		filter = {},
 		frameWidth = 700,
 		frameHeight = 700
 	} }
@@ -474,7 +514,7 @@ function addon:setQuestCategory(questId, target)
 			table.insert(list, questId)
 			added = true
 		elseif category ~= target and table.contains(list, questId) then
-			table.remove(list, questId)
+			table.remove(list, questId) -- TODO doesn't work like this
 		end
 	end
 	
