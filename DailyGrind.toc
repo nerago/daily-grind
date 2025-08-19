@@ -27,4 +27,4 @@ libs\AceTab-3.0\AceTab-3.0.xml
 libs\AceSerializer-3.0\AceSerializer-3.0.xml
 
 DailyGrind.lua
-quest85.lua
+questdata.lua
