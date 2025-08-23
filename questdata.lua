@@ -50,13 +50,14 @@ addon.questTable = {
 	["Anglers"] = { 30598,30700,31446,30678,30588,30753,30658,30754,30763,31443,32107,31444,30584,30585,30701,30698,30586 },
 	["Monk"] = {31840,31841,31842,31843,31844,31845,31846},
 	["Weekly Charms"] = { 32017 },
+	["World Bosses"] = { 32098,32099,32518,32519 }
 }
 
 addon.categoryFilters = {
 	["Cataclysm"] = {"Firelands Invasion", "Tol Barad", "Tol Barad Peninsula"},
 	["MOP - Phase 1"] = {"Cloud Serpent", "Halfhill Farm", "Shado-Pan", "Golden Lotus", "Klaxxi", "Anglers", "Archeology", "Weekly Charms",
 	                     "August Celestials - Krasarang Wilds", "August Celestials - Jade Forest", "August Celestials - Kun-Lai Summit", 
-						 "August Celestials - Townlong Steppes"},
+						 "August Celestials - Townlong Steppes", "World Bosses"},
 	["MOP - Later"] = {"Isle of Thunder"},
 	["MOP - Unchecked Junk"] = {"Jade Temple Grounds", "Krasarang Wilds", "Kun-Lai Summit", "The Arboretum", "The Jade Forest", 
 						 "Vale of Eternal Blossoms", "Valley of the Four Winds", "Dread Wastes"},
@@ -64,4 +65,11 @@ addon.categoryFilters = {
 	["Battle Pets - Other"] = {"Battle Pets - Kalimdor", "Battle Pets - Eastern Kingdoms", "Battle Pets - Outland", "Battle Pets - Northrend", "Battle Pets - Cataclysm"},
 	["Darkmoon"] = {"Darkmoon", "Battle Pets - Darkmoon"},
 	["Other"] = {"Unknown", "Monk"}
+}
+
+addon.nameOverride = {
+	[32098] = "Galleon",  
+	[32099] = "Sha",
+	[32518] = "Nalak",
+	[32519] = "Oondasta"
 }

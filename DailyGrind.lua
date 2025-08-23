@@ -70,12 +70,12 @@ function addon:addTab()
 	if maxIndex > 0 then
 		for i = maxIndex, minIndex, -1 do
 			local questId = acceptedQueue[i]
-			local questInfo = questieDb.GetQuest(questId)
+			local questInfo, name = self:getQuest(questId)
 			if questInfo then
 				local category = self:questCategory(questInfo)
 				
 				local label = gui:Create("Label")
-				label:SetText(questInfo.name)
+				label:SetText(name)
 				group:AddChild(label)
 				
 				local drop = gui:Create("Dropdown")
@@ -255,6 +255,15 @@ function addon:buildQuestList()
 	return list
 end
 
+function addon:getQuest(questId)
+	local questInfo = questieDb.GetQuest(questId)
+	local name = questInfo.name
+	if addon.nameOverride[questId] then
+		name = addon.nameOverride[questId]
+	end
+	return questInfo, name
+end
+
 function addon:buildData()
 	local dataByZone = {}
 	local zoneNameList = {}
@@ -263,10 +272,9 @@ function addon:buildData()
 	local questList = self:buildQuestList()
 	for questId, _ in pairs(questList) do
 		local zoneName, item
-		local questInfo = questieDb.GetQuest(questId)
+		local questInfo, name = self:getQuest(questId)
 		if questInfo then
 			zoneName = self:questCategory(questInfo)
-			local name = questInfo.name
 			local text = name
 			local status = 0
 			local doable, complete = questieDb.IsDoable(questId), C_QuestLog.IsQuestFlaggedCompleted(questId)
@@ -426,48 +434,7 @@ function addon:OnInitialize()
 end
 
 function addon:slashCommand(text)
-	if text == nil or text == "" then
-		self:openFrame()
-	elseif string.startswith(text, "set") then
-		local count, label = string.match(text, "set (%d+) (%a+)")
-		if count and label then
-			self:setQuests(count, label)
-		else
-			print("syntax /daily set # word")
-		end
-	end
-end
-
--- obsolete soon
-function addon:setQuests(count, label)
-	local questTable = self.db.profile.questTable
-	local acceptedQueue = self.acceptedQueue
-	
-	local list = questTable[label]
-	if not list then
-		list = {}
-		questTable[label] = list
-	end
-	
-	local minIndex = #acceptedQueue - count + 1
-	if minIndex >= 1 then
-		for i = #acceptedQueue - count + 1, #acceptedQueue do
-			local questId = acceptedQueue[i]
-			local questInfo = questieDb.GetQuest(questId)
-			local name = "Unknown"
-			if questInfo then
-				name = questInfo.name
-			end
-			if table.contains(list, questId) then
-				print("quest " .. questId .. " (" .. name .. ") already set to " .. label)
-			else
-				self:setQuestCategory(questId, label)
-				print("adding quest " .. questId .. " (" .. name .. ") as " .. label)
-			end
-		end
-	else
-		print("not enough quests")
-	end
+	self:openFrame()
 end
 
 function addon:updateGroupList()
